@@ -80,7 +80,7 @@ export default function RobotSelection() {
           <motion.div
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => setLocation('/slave')}
+            onClick={() => setLocation('/follower')}
             className="cursor-pointer"
           >
             <Card className="p-8 bg-gradient-to-br from-purple-900/20 to-purple-800/10 border-purple-500/50 hover:border-purple-400 transition-all h-full">
@@ -96,7 +96,7 @@ export default function RobotSelection() {
                   </p>
                 </div>
                 <Button
-                  onClick={() => setLocation('/slave')}
+                  onClick={() => setLocation('/follower')}
                   className="w-full bg-purple-600 hover:bg-purple-700 text-white mt-4"
                 >
                   اختر التابع
