@@ -76,7 +76,7 @@ export default function RobotSelection() {
             </Card>
           </motion.div>
 
-          {/* Follower Robot Card */}
+          {/* Slave Robot Card */}
           <motion.div
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -90,7 +90,7 @@ export default function RobotSelection() {
                 </div>
                 <div>
                   <h2 className="text-3xl font-bold text-purple-400 mb-2">الروبوت التابع</h2>
-                  <p className="text-gray-400 mb-4">Follower Robot</p>
+                  <p className="text-gray-400 mb-4">Slave Robot</p>
                   <p className="text-sm text-gray-500">
                     تحكم في الروبوت التابع مع مراقبة بيانات الأداء والاستهلاك
                   </p>
