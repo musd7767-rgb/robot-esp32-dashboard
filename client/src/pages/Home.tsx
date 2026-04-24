@@ -98,9 +98,9 @@ export default function Home() {
       <motion.div className="border-b border-border bg-gradient-to-r from-card to-background p-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
         <div className="max-w-7xl mx-auto">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">
-            Robot Controller
+            🤖 Robot Controller Dashboard
           </h1>
-          <p className="text-muted mt-1">ESP32 Real-time Telemetry and Control</p>
+          <p className="text-muted mt-1">✨ ESP32 Real-time Telemetry and Control System - تم التعديل من قبل Manus AI</p>
         </div>
       </motion.div>
 
@@ -257,7 +257,7 @@ export default function Home() {
         </Card>
 
         <div className="p-4 bg-card border border-border rounded-lg text-center text-sm text-muted">
-          <p>Robot Controller Dashboard - Real-time data from ESP32</p>
+          <p>🚀 Robot Controller Dashboard - Real-time data from ESP32 | Last Updated: {new Date().toLocaleString()}</p>
         </div>
       </div>
     </div>
