@@ -2,10 +2,12 @@ import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { motion } from 'framer-motion';
-import { Crown, Users } from 'lucide-react';
+import { Crown, Users, ArrowLeft } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function RobotSelection() {
   const [, setLocation] = useLocation();
+  const { t } = useLanguage();
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -28,7 +30,16 @@ export default function RobotSelection() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4 relative">
+      <Button 
+        onClick={() => setLocation('/')}
+        variant="ghost" 
+        className="absolute top-4 left-4 text-white hover:bg-white/10"
+      >
+        <ArrowLeft className="mr-2 h-4 w-4" />
+        {t('dashboard.back')}
+      </Button>
+
       <motion.div
         className="w-full max-w-4xl"
         variants={containerVariants}
@@ -38,10 +49,10 @@ export default function RobotSelection() {
         {/* Header */}
         <motion.div className="text-center mb-12" variants={itemVariants}>
           <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent mb-4">
-            🤖 Robot Controller
+            {t('selection.title')}
           </h1>
           <p className="text-xl text-gray-400">
-            اختر نوع الروبوت الذي تريد التحكم به
+            {t('selection.subtitle')}
           </p>
         </motion.div>
 
@@ -60,17 +71,17 @@ export default function RobotSelection() {
                   <Crown className="w-16 h-16 text-cyan-400" />
                 </div>
                 <div>
-                  <h2 className="text-3xl font-bold text-cyan-400 mb-2">الروبوت القائد</h2>
-                  <p className="text-gray-400 mb-4">Master Robot</p>
+                  <h2 className="text-3xl font-bold text-cyan-400 mb-2">{t('selection.master.title')}</h2>
+                  <p className="text-gray-400 mb-4">{t('selection.master.subtitle')}</p>
                   <p className="text-sm text-gray-500">
-                    تحكم كامل في الروبوت الرئيسي مع مراقبة جميع البيانات والإحصائيات
+                    {t('selection.master.desc')}
                   </p>
                 </div>
                 <Button
                   onClick={() => setLocation('/master')}
                   className="w-full bg-cyan-600 hover:bg-cyan-700 text-white mt-4"
                 >
-                  اختر القائد
+                  {t('selection.master.button')}
                 </Button>
               </div>
             </Card>
@@ -89,17 +100,17 @@ export default function RobotSelection() {
                   <Users className="w-16 h-16 text-purple-400" />
                 </div>
                 <div>
-                  <h2 className="text-3xl font-bold text-purple-400 mb-2">الروبوت التابع</h2>
-                  <p className="text-gray-400 mb-4">Slave Robot</p>
+                  <h2 className="text-3xl font-bold text-purple-400 mb-2">{t('selection.follower.title')}</h2>
+                  <p className="text-gray-400 mb-4">{t('selection.follower.subtitle')}</p>
                   <p className="text-sm text-gray-500">
-                    تحكم في الروبوت التابع مع مراقبة بيانات الأداء والاستهلاك
+                    {t('selection.follower.desc')}
                   </p>
                 </div>
                 <Button
                   onClick={() => setLocation('/slave')}
                   className="w-full bg-purple-600 hover:bg-purple-700 text-white mt-4"
                 >
-                  اختر التابع
+                  {t('selection.follower.button')}
                 </Button>
               </div>
             </Card>
@@ -108,7 +119,7 @@ export default function RobotSelection() {
 
         {/* Footer */}
         <motion.div className="text-center mt-12 text-gray-500 text-sm" variants={itemVariants}>
-          <p>اختر الروبوت المطلوب للبدء في التحكم والمراقبة</p>
+          <p>{t('selection.footer')}</p>
         </motion.div>
       </motion.div>
     </div>

@@ -6,6 +6,7 @@ import { Slider } from '@/components/ui/slider';
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Power, Zap, Gauge, AlertCircle, Play, Square, RotateCw, ArrowLeft } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface RobotData {
   voltage: number;
@@ -26,6 +27,7 @@ interface ChartDataPoint {
 
 export default function SlaveDashboard() {
   const [, setLocation] = useLocation();
+  const { t } = useLanguage();
   const [robotData, setRobotData] = useState<RobotData>({
     voltage: 12.5,
     current: 2.3,
@@ -101,17 +103,17 @@ export default function SlaveDashboard() {
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div>
             <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent">
-              🤝 الروبوت التابع (Slave)
+              {t('follower.title')}
             </h1>
-            <p className="text-muted mt-1">✨ نظام المراقبة والتحكم الثانوي</p>
+            <p className="text-muted mt-1">{t('follower.subtitle')}</p>
           </div>
           <Button
-            onClick={() => setLocation('/')}
+            onClick={() => setLocation('/selection')}
             variant="outline"
             className="flex items-center gap-2"
           >
             <ArrowLeft className="w-4 h-4" />
-            رجوع
+            {t('dashboard.back')}
           </Button>
         </div>
       </motion.div>
@@ -121,7 +123,7 @@ export default function SlaveDashboard() {
           <Card className="p-6 bg-card border-purple-500/30">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-muted text-sm font-medium">الجهد (Voltage)</p>
+                <p className="text-muted text-sm font-medium">{t('dashboard.voltage')}</p>
                 <p className="text-3xl font-bold text-purple-400 mt-2">{robotData.voltage.toFixed(2)}V</p>
               </div>
               <Zap className="w-12 h-12 text-purple-400/40" />
@@ -131,7 +133,7 @@ export default function SlaveDashboard() {
           <Card className="p-6 bg-card border-pink-500/30">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-muted text-sm font-medium">التيار (Current)</p>
+                <p className="text-muted text-sm font-medium">{t('dashboard.current')}</p>
                 <p className="text-3xl font-bold text-pink-400 mt-2">{robotData.current.toFixed(2)}A</p>
               </div>
               <Gauge className="w-12 h-12 text-pink-400/40" />
@@ -141,7 +143,7 @@ export default function SlaveDashboard() {
           <Card className="p-6 bg-card border-indigo-500/30">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-muted text-sm font-medium">الطاقة (Power)</p>
+                <p className="text-muted text-sm font-medium">{t('dashboard.power')}</p>
                 <p className="text-3xl font-bold text-indigo-400 mt-2">{robotData.power.toFixed(2)}W</p>
               </div>
               <Power className="w-12 h-12 text-indigo-400/40" />
@@ -151,7 +153,7 @@ export default function SlaveDashboard() {
           <Card className="p-6 bg-card border-rose-500/30">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-muted text-sm font-medium">درجة الحرارة (Temp)</p>
+                <p className="text-muted text-sm font-medium">{t('dashboard.temp')}</p>
                 <p className="text-3xl font-bold text-rose-400 mt-2">{robotData.temperature.toFixed(1)}°C</p>
               </div>
               <AlertCircle className="w-12 h-12 text-rose-400/40" />
@@ -161,11 +163,11 @@ export default function SlaveDashboard() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <Card className="lg:col-span-1 p-6 bg-card border-border">
-            <h2 className="text-xl font-bold mb-6 text-purple-400">التحكم بالمحرك</h2>
+            <h2 className="text-xl font-bold mb-6 text-purple-400">{t('dashboard.motor_control')}</h2>
             <div className="space-y-4">
               <div>
                 <div className="flex justify-between mb-2">
-                  <label className="text-sm font-medium">السرعة</label>
+                  <label className="text-sm font-medium">{t('dashboard.speed')}</label>
                   <span className="text-sm font-bold text-purple-400">{motorSpeed}/255</span>
                 </div>
                 <Slider value={[motorSpeed]} onValueChange={(value) => setMotorSpeed(value[0])} min={0} max={255} step={1} className="w-full" />
@@ -173,42 +175,42 @@ export default function SlaveDashboard() {
 
               <div className="grid grid-cols-3 gap-3 pt-4">
                 <Button onClick={() => handleMotorCommand('forward')} className="w-full h-12 bg-green-600 hover:bg-green-700 text-white">
-                  <Play className="w-4 h-4 mr-2" /> للأمام
+                  <Play className="w-4 h-4 mr-2" /> {t('dashboard.forward')}
                 </Button>
                 <Button onClick={() => handleMotorCommand('stop')} className="w-full h-12 bg-red-600 hover:bg-red-700 text-white">
-                  <Square className="w-4 h-4 mr-2" /> إيقاف
+                  <Square className="w-4 h-4 mr-2" /> {t('dashboard.stop')}
                 </Button>
                 <Button onClick={() => handleMotorCommand('backward')} className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white">
-                  <RotateCw className="w-4 h-4 mr-2" /> للخلف
+                  <RotateCw className="w-4 h-4 mr-2" /> {t('dashboard.backward')}
                 </Button>
               </div>
 
               <div className="mt-6 p-4 bg-background rounded-lg border border-border">
-                <p className="text-xs text-muted mb-1">حالة المحرك</p>
+                <p className="text-xs text-muted mb-1">{t('dashboard.motor_status')}</p>
                 <p className="text-lg font-bold text-purple-400 capitalize">
-                  {robotData.motorStatus === 'stopped' ? 'متوقف' : robotData.motorStatus === 'forward' ? 'للأمام' : 'للخلف'}
+                  {robotData.motorStatus === 'stopped' ? t('dashboard.status.stopped') : robotData.motorStatus === 'forward' ? t('dashboard.status.forward') : t('dashboard.status.backward')}
                 </p>
               </div>
             </div>
           </Card>
 
           <Card className="lg:col-span-2 p-6 bg-card border-border">
-            <h2 className="text-xl font-bold mb-6 text-purple-400">إحصائيات الطاقة</h2>
+            <h2 className="text-xl font-bold mb-6 text-purple-400">{t('dashboard.energy_stats')}</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="p-4 bg-background rounded-lg border border-border">
-                <p className="text-xs text-muted mb-2">أقصى طاقة</p>
+                <p className="text-xs text-muted mb-2">{t('dashboard.max_power')}</p>
                 <p className="text-2xl font-bold text-indigo-400">{stats.maxPower.toFixed(2)}W</p>
               </div>
               <div className="p-4 bg-background rounded-lg border border-border">
-                <p className="text-xs text-muted mb-2">متوسط الطاقة</p>
+                <p className="text-xs text-muted mb-2">{t('dashboard.avg_power')}</p>
                 <p className="text-2xl font-bold text-purple-400">{stats.avgPower.toFixed(2)}W</p>
               </div>
               <div className="p-4 bg-background rounded-lg border border-border">
-                <p className="text-xs text-muted mb-2">أقصى تيار</p>
+                <p className="text-xs text-muted mb-2">{t('dashboard.max_current')}</p>
                 <p className="text-2xl font-bold text-pink-400">{stats.maxCurrent.toFixed(2)}A</p>
               </div>
               <div className="p-4 bg-background rounded-lg border border-border">
-                <p className="text-xs text-muted mb-2">الطاقة الكلية</p>
+                <p className="text-xs text-muted mb-2">{t('dashboard.total_energy')}</p>
                 <p className="text-2xl font-bold text-rose-400">{stats.totalEnergy.toFixed(3)}Wh</p>
               </div>
             </div>
@@ -217,7 +219,7 @@ export default function SlaveDashboard() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card className="p-6 bg-card border-border">
-            <h3 className="text-lg font-bold mb-4 text-purple-400">استهلاك الطاقة</h3>
+            <h3 className="text-lg font-bold mb-4 text-purple-400">{t('dashboard.power_consumption')}</h3>
             <ResponsiveContainer width="100%" height={250}>
               <AreaChart data={chartData}>
                 <defs>
@@ -236,7 +238,7 @@ export default function SlaveDashboard() {
           </Card>
 
           <Card className="p-6 bg-card border-border">
-            <h3 className="text-lg font-bold mb-4 text-purple-400">الجهد والتيار</h3>
+            <h3 className="text-lg font-bold mb-4 text-purple-400">{t('dashboard.voltage_current')}</h3>
             <ResponsiveContainer width="100%" height={250}>
               <LineChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#2D3E5F" />
@@ -244,15 +246,15 @@ export default function SlaveDashboard() {
                 <YAxis stroke="#A0A0A0" />
                 <Tooltip contentStyle={{ backgroundColor: '#1A1F3A', border: '1px solid #2D3E5F' }} />
                 <Legend />
-                <Line type="monotone" dataKey="voltage" stroke="#D946EF" dot={false} strokeWidth={2} name="الجهد" />
-                <Line type="monotone" dataKey="current" stroke="#EC4899" dot={false} strokeWidth={2} name="التيار" />
+                <Line type="monotone" dataKey="voltage" stroke="#D946EF" dot={false} strokeWidth={2} name={t('dashboard.voltage')} />
+                <Line type="monotone" dataKey="current" stroke="#EC4899" dot={false} strokeWidth={2} name={t('dashboard.current')} />
               </LineChart>
             </ResponsiveContainer>
           </Card>
         </div>
 
         <Card className="p-6 bg-card border-border">
-          <h3 className="text-lg font-bold mb-4 text-purple-400">مراقبة درجة الحرارة</h3>
+          <h3 className="text-lg font-bold mb-4 text-purple-400">{t('dashboard.temp_monitor')}</h3>
           <ResponsiveContainer width="100%" height={250}>
             <AreaChart data={chartData}>
               <defs>
@@ -265,13 +267,13 @@ export default function SlaveDashboard() {
               <XAxis dataKey="time" stroke="#A0A0A0" />
               <YAxis stroke="#A0A0A0" />
               <Tooltip contentStyle={{ backgroundColor: '#1A1F3A', border: '1px solid #2D3E5F' }} />
-              <Area type="monotone" dataKey="temperature" stroke="#F43F5E" fillOpacity={1} fill="url(#colorTempSlave)" name="درجة الحرارة" />
+              <Area type="monotone" dataKey="temperature" stroke="#F43F5E" fillOpacity={1} fill="url(#colorTempSlave)" name={t('dashboard.temp')} />
             </AreaChart>
           </ResponsiveContainer>
         </Card>
 
         <div className="p-4 bg-card border border-border rounded-lg text-center text-sm text-muted">
-          <p>🚀 لوحة تحكم الروبوت التابع - بيانات فعلية من ESP32</p>
+          <p>{t('follower.footer')}</p>
         </div>
       </div>
     </div>
