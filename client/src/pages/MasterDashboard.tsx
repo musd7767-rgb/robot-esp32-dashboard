@@ -7,6 +7,7 @@ import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
 import { Power, Zap, Gauge, AlertCircle, Play, Square, RotateCw, ArrowLeft } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { LanguageToggle } from '@/components/LanguageToggle';
 
 interface RobotData {
   voltage: number;
@@ -107,14 +108,17 @@ export default function MasterDashboard() {
             </h1>
             <p className="text-muted mt-1">{t('master.subtitle')}</p>
           </div>
-          <Button
-            onClick={() => setLocation('/selection')}
-            variant="outline"
-            className="flex items-center gap-2"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            {t('dashboard.back')}
-          </Button>
+          <div className="flex items-center gap-3">
+            <LanguageToggle />
+            <Button
+              onClick={() => setLocation('/selection')}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <ArrowLeft className="w-4 h-4 rtl:rotate-180" />
+              {t('dashboard.back')}
+            </Button>
+          </div>
         </div>
       </motion.div>
 
@@ -202,7 +206,7 @@ export default function MasterDashboard() {
                 <p className="text-2xl font-bold text-green-400">{stats.maxPower.toFixed(2)}W</p>
               </div>
               <div className="p-4 bg-background rounded-lg border border-border">
-                <p className="text-xs text-muted mb-2">{t('dashboard.max_power')}</p>
+                <p className="text-xs text-muted mb-2">{t('dashboard.avg_power')}</p>
                 <p className="text-2xl font-bold text-cyan-400">{stats.avgPower.toFixed(2)}W</p>
               </div>
               <div className="p-4 bg-background rounded-lg border border-border">

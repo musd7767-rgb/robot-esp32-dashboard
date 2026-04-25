@@ -7,6 +7,7 @@ import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
 import { Power, Zap, Gauge, AlertCircle, Play, Square, RotateCw, ArrowLeft } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { LanguageToggle } from '@/components/LanguageToggle';
 
 interface RobotData {
   voltage: number;
@@ -107,14 +108,17 @@ export default function SlaveDashboard() {
             </h1>
             <p className="text-muted mt-1">{t('follower.subtitle')}</p>
           </div>
-          <Button
-            onClick={() => setLocation('/selection')}
-            variant="outline"
-            className="flex items-center gap-2"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            {t('dashboard.back')}
-          </Button>
+          <div className="flex items-center gap-3">
+            <LanguageToggle />
+            <Button
+              onClick={() => setLocation('/selection')}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <ArrowLeft className="w-4 h-4 rtl:rotate-180" />
+              {t('dashboard.back')}
+            </Button>
+          </div>
         </div>
       </motion.div>
 
