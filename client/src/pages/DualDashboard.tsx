@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Power, Zap, Gauge, AlertCircle, Play, Square, RotateCw, ArrowLeft } from 'lucide-react';
+import { Power, Zap, Gauge, AlertCircle, Play, Square, RotateCw, ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { LanguageToggle } from '@/components/LanguageToggle';
@@ -321,13 +321,24 @@ export default function DualDashboard() {
       {/* Header */}
       <motion.div className="border-b border-border bg-gradient-to-r from-card to-background p-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 bg-clip-text text-transparent">
-              🤖 {language === 'ar' ? 'التحكم المشترك' : 'Dual Control'}
-            </h1>
-            <p className="text-muted mt-1">
-              {language === 'ar' ? '✨ التحكم في الروبوتين معاً' : '✨ Control Both Robots Together'}
-            </p>
+          <div className="flex items-center gap-4">
+            <Button
+              onClick={() => setLocation('/slave')}
+              variant="ghost"
+              size="icon"
+              className="hidden md:flex rounded-full hover:bg-white/10"
+              title={t('selection.follower.title')}
+            >
+              <ChevronLeft className="w-8 h-8 rtl:rotate-180" />
+            </Button>
+            <div>
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 bg-clip-text text-transparent">
+                🤖 {language === 'ar' ? 'التحكم المشترك' : 'Dual Control'}
+              </h1>
+              <p className="text-muted mt-1">
+                {language === 'ar' ? '✨ التحكم في الروبوتين معاً' : '✨ Control Both Robots Together'}
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-3">
             <LanguageToggle />
@@ -338,6 +349,15 @@ export default function DualDashboard() {
             >
               <ArrowLeft className="w-4 h-4 rtl:rotate-180" />
               {t('dashboard.back')}
+            </Button>
+            <Button
+              onClick={() => setLocation('/master')}
+              variant="ghost"
+              size="icon"
+              className="hidden md:flex rounded-full hover:bg-white/10"
+              title={t('selection.master.title')}
+            >
+              <ChevronRight className="w-8 h-8 rtl:rotate-180" />
             </Button>
           </div>
         </div>

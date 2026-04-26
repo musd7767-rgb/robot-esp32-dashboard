@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Power, Zap, Gauge, AlertCircle, Play, Square, RotateCw, ArrowLeft, Gamepad2 } from 'lucide-react';
+import { Power, Zap, Gauge, AlertCircle, Play, Square, RotateCw, ArrowLeft, ChevronLeft, ChevronRight, Users } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { LanguageToggle } from '@/components/LanguageToggle';
@@ -44,10 +44,10 @@ export default function MasterDashboard() {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      const newVoltage = 11.8 + Math.random() * 1.4;
-      const newCurrent = motorSpeed > 0 ? (motorSpeed / 255) * 3.5 + (Math.random() - 0.5) * 0.5 : Math.random() * 0.3;
+      const newVoltage = 12.0 + Math.random() * 1.0;
+      const newCurrent = motorSpeed > 0 ? (motorSpeed / 255) * 4.5 + (Math.random() - 0.5) * 0.5 : Math.random() * 0.2;
       const newPower = newVoltage * newCurrent;
-      const newTemp = 30 + (motorSpeed / 255) * 15 + (Math.random() - 0.5) * 2;
+      const newTemp = 32 + (motorSpeed / 255) * 20 + (Math.random() - 0.5) * 3;
 
       setRobotData((prev) => ({
         ...prev,
@@ -102,21 +102,25 @@ export default function MasterDashboard() {
     <div className="min-h-screen bg-background text-foreground">
       <motion.div className="border-b border-border bg-gradient-to-r from-card to-background p-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">
-              {t('master.title')}
-            </h1>
-            <p className="text-muted mt-1">{t('master.subtitle')}</p>
+          <div className="flex items-center gap-4">
+            <Button
+              onClick={() => setLocation('/dual')}
+              variant="ghost"
+              size="icon"
+              className="hidden md:flex rounded-full hover:bg-white/10"
+              title={t('selection.dual.title')}
+            >
+              <ChevronLeft className="w-8 h-8 rtl:rotate-180" />
+            </Button>
+            <div>
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
+                {t('master.title')}
+              </h1>
+              <p className="text-muted mt-1">{t('master.subtitle')}</p>
+            </div>
           </div>
           <div className="flex items-center gap-3">
             <LanguageToggle />
-            <Button
-              onClick={() => setLocation('/master/control')}
-              className="flex items-center gap-2 bg-yellow-600 hover:bg-yellow-700 text-white"
-            >
-              <Gamepad2 className="w-4 h-4" />
-              🎮 Control
-            </Button>
             <Button
               onClick={() => setLocation('/selection')}
               variant="outline"
@@ -125,11 +129,21 @@ export default function MasterDashboard() {
               <ArrowLeft className="w-4 h-4 rtl:rotate-180" />
               {t('dashboard.back')}
             </Button>
+            <Button
+              onClick={() => setLocation('/slave')}
+              variant="ghost"
+              size="icon"
+              className="hidden md:flex rounded-full hover:bg-white/10"
+              title={t('selection.follower.title')}
+            >
+              <ChevronRight className="w-8 h-8 rtl:rotate-180" />
+            </Button>
           </div>
         </div>
       </motion.div>
 
       <div className="max-w-7xl mx-auto p-6 space-y-6">
+        {/* Metric Cards Section */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card className="p-6 bg-card border-cyan-500/30">
             <div className="flex items-center justify-between">
@@ -141,23 +155,23 @@ export default function MasterDashboard() {
             </div>
           </Card>
 
-          <Card className="p-6 bg-card border-purple-500/30">
+          <Card className="p-6 bg-card border-blue-500/30">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-muted text-sm font-medium">{t('dashboard.current')}</p>
-                <p className="text-3xl font-bold text-purple-400 mt-2">{robotData.current.toFixed(2)}A</p>
+                <p className="text-3xl font-bold text-blue-400 mt-2">{robotData.current.toFixed(2)}A</p>
               </div>
-              <Gauge className="w-12 h-12 text-purple-400/40" />
+              <Gauge className="w-12 h-12 text-blue-400/40" />
             </div>
           </Card>
 
-          <Card className="p-6 bg-card border-green-500/30">
+          <Card className="p-6 bg-card border-indigo-500/30">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-muted text-sm font-medium">{t('dashboard.power')}</p>
-                <p className="text-3xl font-bold text-green-400 mt-2">{robotData.power.toFixed(2)}W</p>
+                <p className="text-3xl font-bold text-indigo-400 mt-2">{robotData.power.toFixed(2)}W</p>
               </div>
-              <Power className="w-12 h-12 text-green-400/40" />
+              <Power className="w-12 h-12 text-indigo-400/40" />
             </div>
           </Card>
 
@@ -172,6 +186,7 @@ export default function MasterDashboard() {
           </Card>
         </div>
 
+        {/* Controls Section */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <Card className="lg:col-span-1 p-6 bg-card border-border">
             <h2 className="text-xl font-bold mb-6 text-cyan-400">{t('dashboard.motor_control')}</h2>
@@ -202,6 +217,13 @@ export default function MasterDashboard() {
                   {robotData.motorStatus === 'stopped' ? t('dashboard.status.stopped') : robotData.motorStatus === 'forward' ? t('dashboard.status.forward') : t('dashboard.status.backward')}
                 </p>
               </div>
+              
+              <Button 
+                onClick={() => setLocation('/master/control')}
+                className="w-full mt-4 bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-400 border border-cyan-500/50"
+              >
+                🎮 {language === 'ar' ? 'التحكم اليدوي' : 'Manual Control'}
+              </Button>
             </div>
           </Card>
 
@@ -210,7 +232,7 @@ export default function MasterDashboard() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="p-4 bg-background rounded-lg border border-border">
                 <p className="text-xs text-muted mb-2">{t('dashboard.max_power')}</p>
-                <p className="text-2xl font-bold text-green-400">{stats.maxPower.toFixed(2)}W</p>
+                <p className="text-2xl font-bold text-indigo-400">{stats.maxPower.toFixed(2)}W</p>
               </div>
               <div className="p-4 bg-background rounded-lg border border-border">
                 <p className="text-xs text-muted mb-2">{t('dashboard.avg_power')}</p>
@@ -218,7 +240,7 @@ export default function MasterDashboard() {
               </div>
               <div className="p-4 bg-background rounded-lg border border-border">
                 <p className="text-xs text-muted mb-2">{t('dashboard.max_current')}</p>
-                <p className="text-2xl font-bold text-purple-400">{stats.maxCurrent.toFixed(2)}A</p>
+                <p className="text-2xl font-bold text-blue-400">{stats.maxCurrent.toFixed(2)}A</p>
               </div>
               <div className="p-4 bg-background rounded-lg border border-border">
                 <p className="text-xs text-muted mb-2">{t('dashboard.total_energy')}</p>
@@ -228,6 +250,7 @@ export default function MasterDashboard() {
           </Card>
         </div>
 
+        {/* Charts Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card className="p-6 bg-card border-border">
             <h3 className="text-lg font-bold mb-4 text-cyan-400">{t('dashboard.power_consumption')}</h3>
@@ -235,15 +258,15 @@ export default function MasterDashboard() {
               <AreaChart data={chartData}>
                 <defs>
                   <linearGradient id="colorPower" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#00D9FF" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#00D9FF" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#22D3EE" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#22D3EE" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#2D3E5F" />
                 <XAxis dataKey="time" stroke="#A0A0A0" />
                 <YAxis stroke="#A0A0A0" />
                 <Tooltip contentStyle={{ backgroundColor: '#1A1F3A', border: '1px solid #2D3E5F' }} />
-                <Area type="monotone" dataKey="power" stroke="#00D9FF" fillOpacity={1} fill="url(#colorPower)" />
+                <Area type="monotone" dataKey="power" stroke="#22D3EE" fillOpacity={1} fill="url(#colorPower)" />
               </AreaChart>
             </ResponsiveContainer>
           </Card>
@@ -257,8 +280,8 @@ export default function MasterDashboard() {
                 <YAxis stroke="#A0A0A0" />
                 <Tooltip contentStyle={{ backgroundColor: '#1A1F3A', border: '1px solid #2D3E5F' }} />
                 <Legend />
-                <Line type="monotone" dataKey="voltage" stroke="#00D9FF" dot={false} strokeWidth={2} name={t('dashboard.voltage')} />
-                <Line type="monotone" dataKey="current" stroke="#B026FF" dot={false} strokeWidth={2} name={t('dashboard.current')} />
+                <Line type="monotone" dataKey="voltage" stroke="#22D3EE" dot={false} strokeWidth={2} name={t('dashboard.voltage')} />
+                <Line type="monotone" dataKey="current" stroke="#3B82F6" dot={false} strokeWidth={2} name={t('dashboard.current')} />
               </LineChart>
             </ResponsiveContainer>
           </Card>
@@ -270,15 +293,15 @@ export default function MasterDashboard() {
             <AreaChart data={chartData}>
               <defs>
                 <linearGradient id="colorTemp" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#FF6B35" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#FF6B35" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#F97316" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#F97316" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#2D3E5F" />
               <XAxis dataKey="time" stroke="#A0A0A0" />
               <YAxis stroke="#A0A0A0" />
               <Tooltip contentStyle={{ backgroundColor: '#1A1F3A', border: '1px solid #2D3E5F' }} />
-              <Area type="monotone" dataKey="temperature" stroke="#FF6B35" fillOpacity={1} fill="url(#colorTemp)" name={t('dashboard.temp')} />
+              <Area type="monotone" dataKey="temperature" stroke="#F97316" fillOpacity={1} fill="url(#colorTemp)" name={t('dashboard.temp')} />
             </AreaChart>
           </ResponsiveContainer>
         </Card>

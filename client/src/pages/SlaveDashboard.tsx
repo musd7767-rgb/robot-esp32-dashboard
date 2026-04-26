@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Power, Zap, Gauge, AlertCircle, Play, Square, RotateCw, ArrowLeft, Gamepad2 } from 'lucide-react';
+import { Power, Zap, Gauge, AlertCircle, Play, Square, RotateCw, ArrowLeft, ChevronLeft, ChevronRight, Crown } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { LanguageToggle } from '@/components/LanguageToggle';
@@ -28,7 +28,7 @@ interface ChartDataPoint {
 
 export default function SlaveDashboard() {
   const [, setLocation] = useLocation();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [robotData, setRobotData] = useState<RobotData>({
     voltage: 12.5,
     current: 2.3,
@@ -102,21 +102,25 @@ export default function SlaveDashboard() {
     <div className="min-h-screen bg-background text-foreground">
       <motion.div className="border-b border-border bg-gradient-to-r from-card to-background p-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent">
-              {t('follower.title')}
-            </h1>
-            <p className="text-muted mt-1">{t('follower.subtitle')}</p>
+          <div className="flex items-center gap-4">
+            <Button
+              onClick={() => setLocation('/master')}
+              variant="ghost"
+              size="icon"
+              className="hidden md:flex rounded-full hover:bg-white/10"
+              title={t('selection.master.title')}
+            >
+              <ChevronLeft className="w-8 h-8 rtl:rotate-180" />
+            </Button>
+            <div>
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent">
+                {t('follower.title')}
+              </h1>
+              <p className="text-muted mt-1">{t('follower.subtitle')}</p>
+            </div>
           </div>
           <div className="flex items-center gap-3">
             <LanguageToggle />
-            <Button
-              onClick={() => setLocation('/follower/control')}
-              className="flex items-center gap-2 bg-yellow-600 hover:bg-yellow-700 text-white"
-            >
-              <Gamepad2 className="w-4 h-4" />
-              🎮 Control
-            </Button>
             <Button
               onClick={() => setLocation('/selection')}
               variant="outline"
@@ -124,6 +128,15 @@ export default function SlaveDashboard() {
             >
               <ArrowLeft className="w-4 h-4 rtl:rotate-180" />
               {t('dashboard.back')}
+            </Button>
+            <Button
+              onClick={() => setLocation('/dual')}
+              variant="ghost"
+              size="icon"
+              className="hidden md:flex rounded-full hover:bg-white/10"
+              title={t('selection.dual.title')}
+            >
+              <ChevronRight className="w-8 h-8 rtl:rotate-180" />
             </Button>
           </div>
         </div>
@@ -202,6 +215,13 @@ export default function SlaveDashboard() {
                   {robotData.motorStatus === 'stopped' ? t('dashboard.status.stopped') : robotData.motorStatus === 'forward' ? t('dashboard.status.forward') : t('dashboard.status.backward')}
                 </p>
               </div>
+              
+              <Button 
+                onClick={() => setLocation('/slave/control')}
+                className="w-full mt-4 bg-purple-600/20 hover:bg-purple-600/30 text-purple-400 border border-purple-500/50"
+              >
+                🎮 {language === 'ar' ? 'التحكم اليدوي' : 'Manual Control'}
+              </Button>
             </div>
           </Card>
 
