@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Power, Zap, Gauge, AlertCircle, Play, Square, RotateCw, ArrowLeft } from 'lucide-react';
+import { Power, Zap, Gauge, AlertCircle, Play, Square, RotateCw, ArrowLeft, Gamepad2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { LanguageToggle } from '@/components/LanguageToggle';
@@ -110,6 +110,13 @@ export default function SlaveDashboard() {
           </div>
           <div className="flex items-center gap-3">
             <LanguageToggle />
+            <Button
+              onClick={() => setLocation('/follower/control')}
+              className="flex items-center gap-2 bg-yellow-600 hover:bg-yellow-700 text-white"
+            >
+              <Gamepad2 className="w-4 h-4" />
+              🎮 Control
+            </Button>
             <Button
               onClick={() => setLocation('/selection')}
               variant="outline"

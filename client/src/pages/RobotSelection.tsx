@@ -101,7 +101,7 @@ export default function RobotSelection() {
           <motion.div
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => setLocation('/slave')}
+            onClick={() => setLocation('/follower')}
             className="cursor-pointer group"
           >
             <Card className="p-8 bg-card/40 backdrop-blur-md border-purple-500/30 group-hover:border-purple-400 transition-all h-full shadow-xl shadow-purple-500/5">
@@ -117,7 +117,7 @@ export default function RobotSelection() {
                   </p>
                 </div>
                 <Button
-                  onClick={(e) => { e.stopPropagation(); setLocation('/slave'); }}
+                  onClick={(e) => { e.stopPropagation(); setLocation('/follower'); }}
                   className="w-full bg-purple-600 hover:bg-purple-700 text-white mt-4 shadow-lg shadow-purple-600/20"
                 >
                   {t('selection.follower.button')}
