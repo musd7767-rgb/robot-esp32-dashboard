@@ -9,6 +9,7 @@ import LanguageSelection from "./pages/LanguageSelection";
 import RobotSelection from "./pages/RobotSelection";
 import MasterDashboard from "./pages/MasterDashboard";
 import SlaveDashboard from "./pages/SlaveDashboard";
+import DualDashboard from "./pages/DualDashboard";
 import ControlPanel from "./pages/ControlPanel";
 import GamepadControl from "./pages/GamepadControl";
 
@@ -21,7 +22,9 @@ function Router() {
       <Route path={"/master"} component={MasterDashboard} />
       <Route path={"/master/control"} component={() => <GamepadControl robotType="master" />} />
       <Route path={"/follower"} component={SlaveDashboard} />
+      <Route path={"/slave"} component={SlaveDashboard} />
       <Route path={"/follower/control"} component={() => <GamepadControl robotType="follower" />} />
+      <Route path={"/dual"} component={DualDashboard} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
