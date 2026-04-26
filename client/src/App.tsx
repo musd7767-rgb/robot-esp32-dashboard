@@ -9,6 +9,7 @@ import LanguageSelection from "./pages/LanguageSelection";
 import RobotSelection from "./pages/RobotSelection";
 import MasterDashboard from "./pages/MasterDashboard";
 import SlaveDashboard from "./pages/SlaveDashboard";
+import ControlPanel from "./pages/ControlPanel";
 
 
 function Router() {
@@ -17,7 +18,9 @@ function Router() {
       <Route path={"/"} component={LanguageSelection} />
       <Route path={"/selection"} component={RobotSelection} />
       <Route path={"/master"} component={MasterDashboard} />
-      <Route path={"/slave"} component={SlaveDashboard} />
+      <Route path={"/master/control"} component={() => <ControlPanel robotType="master" />} />
+      <Route path={"/follower"} component={SlaveDashboard} />
+      <Route path={"/follower/control"} component={() => <ControlPanel robotType="follower" />} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
@@ -35,7 +38,7 @@ function App() {
     <ErrorBoundary>
       <LanguageProvider>
         <ThemeProvider
-          defaultTheme="light"
+          defaultTheme="dark"
           // switchable
         >
           <TooltipProvider>
