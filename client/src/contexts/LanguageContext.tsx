@@ -47,6 +47,7 @@ const translations = {
     'dashboard.power_consumption': 'استهلاك الطاقة',
     'dashboard.voltage_current': 'الجهد والتيار',
     'dashboard.temp_monitor': 'مراقبة درجة الحرارة',
+    'dashboard.manual_control': 'التحكم اليدوي',
     
     // Master Specific
     'master.title': '👑 الروبوت القائد (Master)',
@@ -102,6 +103,7 @@ const translations = {
     'dashboard.power_consumption': 'Power Consumption',
     'dashboard.voltage_current': 'Voltage & Current',
     'dashboard.temp_monitor': 'Temperature Monitoring',
+    'dashboard.manual_control': 'Manual Control',
     
     // Master Specific
     'master.title': '👑 Master Robot',

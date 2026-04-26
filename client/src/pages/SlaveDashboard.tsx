@@ -220,7 +220,7 @@ export default function SlaveDashboard() {
                 onClick={() => setLocation('/slave/control')}
                 className="w-full mt-4 bg-purple-600/20 hover:bg-purple-600/30 text-purple-400 border border-purple-500/50"
               >
-                🎮 {language === 'ar' ? 'التحكم اليدوي' : 'Manual Control'}
+                🎮 {t('dashboard.manual_control')}
               </Button>
             </div>
           </Card>

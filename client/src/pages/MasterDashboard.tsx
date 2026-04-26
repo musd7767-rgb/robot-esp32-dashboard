@@ -28,7 +28,7 @@ interface ChartDataPoint {
 
 export default function MasterDashboard() {
   const [, setLocation] = useLocation();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [robotData, setRobotData] = useState<RobotData>({
     voltage: 12.5,
     current: 2.3,
@@ -222,7 +222,7 @@ export default function MasterDashboard() {
                 onClick={() => setLocation('/master/control')}
                 className="w-full mt-4 bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-400 border border-cyan-500/50"
               >
-                🎮 {language === 'ar' ? 'التحكم اليدوي' : 'Manual Control'}
+                🎮 {t('dashboard.manual_control')}
               </Button>
             </div>
           </Card>
