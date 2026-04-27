@@ -137,10 +137,12 @@ export default function VirtualJoystick({
         {/* الـ Knob (المقبض) */}
         <div
           ref={knobRef}
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-br from-cyan-400 to-cyan-600 rounded-full shadow-lg shadow-cyan-500/50 transition-all duration-75 pointer-events-none"
+          className="absolute bg-gradient-to-br from-cyan-400 to-cyan-600 rounded-full shadow-lg shadow-cyan-500/50 transition-all duration-75 pointer-events-none"
           style={{
             width: `${knobRadius * 2}px`,
             height: `${knobRadius * 2}px`,
+            left: `50%`,
+            top: `50%`,
             transform: `translate(calc(-50% + ${knobX}px), calc(-50% + ${knobY}px))`,
           }}
         >
