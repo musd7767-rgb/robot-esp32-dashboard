@@ -59,6 +59,24 @@ const translations = {
     'follower.subtitle': '✨ نظام المراقبة والتحكم الثانوي',
     'follower.footer': '🚀 لوحة تحكم الروبوت التابع - بيانات فعلية من ESP32',
 
+    // Page Selection
+    'pageSelection.title': '📋 اختر الصفحة',
+    'pageSelection.subtitle': 'اختر بين عرض المعلومات أو التحكم بالروبوتات',
+    'pageSelection.information.title': 'المعلومات',
+    'pageSelection.information.subtitle': 'عرض بيانات الروبوتات والرسوم البيانية',
+    'pageSelection.control.title': 'التحكم',
+    'pageSelection.control.subtitle': 'التحكم بحركة الروبوتات',
+
+    // Information Page
+    'information.title': 'معلومات الروبوتات',
+    'information.subtitle': 'عرض معلومات القائد والتابع',
+    'information.charts': 'الرسوم البيانية',
+    'information.battery': 'البطارية',
+
+    // Control Page
+    'control.title': 'التحكم بالروبوتات',
+    'control.subtitle': 'قيد التطوير',
+
     // Language Selection Page
     'lang.title': 'اختر اللغة / Choose Language',
     'lang.arabic': 'العربية',
@@ -114,6 +132,24 @@ const translations = {
     'follower.title': '🤝 Follower Robot',
     'follower.subtitle': '✨ Secondary Monitoring & Control System',
     'follower.footer': '🚀 Follower Robot Dashboard - Real-time data from ESP32',
+
+    // Page Selection
+    'pageSelection.title': '📋 Choose Page',
+    'pageSelection.subtitle': 'Choose between viewing information or controlling robots',
+    'pageSelection.information.title': 'Information',
+    'pageSelection.information.subtitle': 'View robot data and charts',
+    'pageSelection.control.title': 'Control',
+    'pageSelection.control.subtitle': 'Control robot movement',
+
+    // Information Page
+    'information.title': 'Robot Information',
+    'information.subtitle': 'View master and follower data',
+    'information.charts': 'Charts',
+    'information.battery': 'Battery',
+
+    // Control Page
+    'control.title': 'Robot Control',
+    'control.subtitle': 'Under Development',
 
     // Language Selection Page
     'lang.title': 'Choose Language / اختر اللغة',

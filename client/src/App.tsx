@@ -6,25 +6,18 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { LanguageProvider } from "./contexts/LanguageContext";
 import LanguageSelection from "./pages/LanguageSelection";
-import RobotSelection from "./pages/RobotSelection";
-import MasterDashboard from "./pages/MasterDashboard";
-import SlaveDashboard from "./pages/SlaveDashboard";
-import DualDashboard from "./pages/DualDashboard";
-import ControlPanel from "./pages/ControlPanel";
-import GamepadControl from "./pages/GamepadControl";
+import PageSelection from "./pages/PageSelection";
+import InformationPage from "./pages/InformationPage";
+import ControlPage from "./pages/ControlPage";
 
 
 function Router() {
   return (
     <Switch>
       <Route path={"/"} component={LanguageSelection} />
-      <Route path={"/selection"} component={RobotSelection} />
-      <Route path={"/master"} component={MasterDashboard} />
-      <Route path={"/master/control"} component={() => <GamepadControl robotType="master" />} />
-      <Route path={"/follower"} component={SlaveDashboard} />
-      <Route path={"/slave"} component={SlaveDashboard} />
-      <Route path={"/follower/control"} component={() => <GamepadControl robotType="follower" />} />
-      <Route path={"/dual"} component={DualDashboard} />
+      <Route path={"/selection"} component={PageSelection} />
+      <Route path={"/information"} component={InformationPage} />
+      <Route path={"/control"} component={ControlPage} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
