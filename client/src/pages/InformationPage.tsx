@@ -6,484 +6,305 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { motion } from 'framer-motion';
 import {
+  ArrowLeft,
+  Activity,
+  Battery,
+  Thermometer,
+  Zap,
+  Cpu,
+  RefreshCw,
+  Settings,
+  AlertTriangle,
+} from 'lucide-react';
+import {
   LineChart,
   Line,
-  AreaChart,
-  Area,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
+  Legend,
 } from 'recharts';
-import {
-  Zap,
-  Gauge,
-  Power,
-  AlertCircle,
-  ArrowLeft,
-  Battery,
-  Thermometer,
-} from 'lucide-react';
-
-interface RobotData {
-  voltage: number;
-  current: number;
-  power: number;
-  temperature: number;
-  battery: number;
-  motorStatus: 'stopped' | 'forward' | 'backward';
-}
-
-interface ChartDataPoint {
-  time: string;
-  masterPower: number;
-  followerPower: number;
-  masterVoltage: number;
-  followerVoltage: number;
-  masterCurrent: number;
-  followerCurrent: number;
-  masterTemperature: number;
-  followerTemperature: number;
-}
+import { fetchRobotData, getAdafruitConfig, saveAdafruitConfig, RobotData } from '@/lib/adafruit';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 export default function InformationPage() {
   const [, setLocation] = useLocation();
   const { t, language } = useLanguage();
   const isArabic = language === 'ar';
 
-  // Master robot data
+  const [config, setConfig] = useState(getAdafruitConfig());
+  const [showSettings, setShowSettings] = useState(!config.username || !config.key);
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   const [masterData, setMasterData] = useState<RobotData>({
-    voltage: 12.5,
-    current: 2.3,
-    power: 28.75,
-    temperature: 35.2,
-    battery: 85,
-    motorStatus: 'stopped',
+    voltage: 0,
+    current: 0,
+    power: 0,
+    temperature: 0,
+    battery: 0,
+    motor_status: 'offline',
+    timestamp: '',
   });
 
-  // Follower robot data (received from master via Adafruit IO)
   const [followerData, setFollowerData] = useState<RobotData>({
-    voltage: 12.0,
-    current: 1.8,
-    power: 21.6,
-    temperature: 32.5,
-    battery: 78,
-    motorStatus: 'stopped',
+    voltage: 0,
+    current: 0,
+    power: 0,
+    temperature: 0,
+    battery: 0,
+    motor_status: 'offline',
+    timestamp: '',
   });
 
-  const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
-  const [masterStats, setMasterStats] = useState({
-    maxPower: 0,
-    avgPower: 0,
-    maxCurrent: 0,
-  });
-  const [followerStats, setFollowerStats] = useState({
-    maxPower: 0,
-    avgPower: 0,
-    maxCurrent: 0,
-  });
+  const [history, setHistory] = useState<any[]>([]);
 
-  // Simulate data updates (in real scenario, this would come from Adafruit IO)
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const newMasterVoltage = 12.0 + Math.random() * 1.0;
-      const newMasterCurrent = 1.5 + Math.random() * 2.0;
-      const newMasterPower = newMasterVoltage * newMasterCurrent;
-      const newMasterTemp = 32 + Math.random() * 10;
+  const updateData = async () => {
+    if (!config.username || !config.key) return;
+    
+    setIsLoading(true);
+    try {
+      const [newMaster, newFollower] = await Promise.all([
+        fetchRobotData(config, 'robot-master-data'),
+        fetchRobotData(config, 'robot-follower-data'),
+      ]);
 
-      const newFollowerVoltage = 11.8 + Math.random() * 0.8;
-      const newFollowerCurrent = 1.0 + Math.random() * 1.5;
-      const newFollowerPower = newFollowerVoltage * newFollowerCurrent;
-      const newFollowerTemp = 30 + Math.random() * 8;
+      if (newMaster) setMasterData(newMaster);
+      if (newFollower) setFollowerData(newFollower);
 
-      setMasterData((prev) => ({
-        ...prev,
-        voltage: parseFloat(newMasterVoltage.toFixed(2)),
-        current: parseFloat(newMasterCurrent.toFixed(2)),
-        power: parseFloat(newMasterPower.toFixed(2)),
-        temperature: parseFloat(newMasterTemp.toFixed(1)),
-        battery: Math.max(0, prev.battery - Math.random() * 0.1),
-      }));
-
-      setFollowerData((prev) => ({
-        ...prev,
-        voltage: parseFloat(newFollowerVoltage.toFixed(2)),
-        current: parseFloat(newFollowerCurrent.toFixed(2)),
-        power: parseFloat(newFollowerPower.toFixed(2)),
-        temperature: parseFloat(newFollowerTemp.toFixed(1)),
-        battery: Math.max(0, prev.battery - Math.random() * 0.08),
-      }));
-
-      setChartData((prev) => {
-        const updated = [
-          ...prev,
-          {
-            time: new Date().toLocaleTimeString(),
-            masterPower: parseFloat(newMasterPower.toFixed(2)),
-            followerPower: parseFloat(newFollowerPower.toFixed(2)),
-            masterVoltage: parseFloat(newMasterVoltage.toFixed(2)),
-            followerVoltage: parseFloat(newFollowerVoltage.toFixed(2)),
-            masterCurrent: parseFloat(newMasterCurrent.toFixed(2)),
-            followerCurrent: parseFloat(newFollowerCurrent.toFixed(2)),
-            masterTemperature: parseFloat(newMasterTemp.toFixed(1)),
-            followerTemperature: parseFloat(newFollowerTemp.toFixed(1)),
-          },
-        ];
-        return updated.slice(-60);
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  // Calculate statistics
-  useEffect(() => {
-    if (chartData.length > 0) {
-      const masterPowers = chartData.map((d) => d.masterPower);
-      const masterCurrents = chartData.map((d) => d.masterCurrent);
-      const followerPowers = chartData.map((d) => d.followerPower);
-      const followerCurrents = chartData.map((d) => d.followerCurrent);
-
-      setMasterStats({
-        maxPower: Math.max(...masterPowers),
-        avgPower: masterPowers.reduce((a, b) => a + b, 0) / masterPowers.length,
-        maxCurrent: Math.max(...masterCurrents),
-      });
-
-      setFollowerStats({
-        maxPower: Math.max(...followerPowers),
-        avgPower: followerPowers.reduce((a, b) => a + b, 0) / followerPowers.length,
-        maxCurrent: Math.max(...followerCurrents),
-      });
+      if (newMaster || newFollower) {
+        setLastUpdate(new Date());
+        setError(null);
+        
+        // Update history for charts
+        const timestamp = new Date().toLocaleTimeString();
+        setHistory((prev) => {
+          const newHistory = [
+            ...prev,
+            {
+              time: timestamp,
+              masterPower: newMaster?.power || 0,
+              followerPower: newFollower?.power || 0,
+              masterTemp: newMaster?.temperature || 0,
+              followerTemp: newFollower?.temperature || 0,
+              masterVoltage: newMaster?.voltage || 0,
+              followerVoltage: newFollower?.voltage || 0,
+            },
+          ];
+          return newHistory.slice(-20); // Keep last 20 points
+        });
+      } else {
+        setError(isArabic ? 'لم يتم العثور على بيانات. تأكد من تشغيل السكريبت.' : 'No data found. Make sure the simulator is running.');
+      }
+    } catch (err) {
+      setError(isArabic ? 'خطأ في الاتصال بـ Adafruit IO' : 'Error connecting to Adafruit IO');
+    } finally {
+      setIsLoading(false);
     }
-  }, [chartData]);
-
-  const getBatteryColor = (battery: number) => {
-    if (battery > 60) return 'text-green-500';
-    if (battery > 30) return 'text-yellow-500';
-    return 'text-red-500';
   };
 
-  const getTempColor = (temp: number) => {
-    if (temp < 45) return 'text-blue-500';
-    if (temp < 60) return 'text-yellow-500';
-    return 'text-red-500';
+  useEffect(() => {
+    if (config.username && config.key) {
+      updateData();
+      const interval = setInterval(updateData, 5000); // Fetch every 5 seconds (Adafruit Free Tier safe)
+      return () => clearInterval(interval);
+    }
+  }, [config]);
+
+  const handleSaveConfig = (e: React.FormEvent) => {
+    e.preventDefault();
+    saveAdafruitConfig(config);
+    setShowSettings(false);
+    updateData();
   };
 
-  const MetricCard = ({
-    icon: Icon,
-    label,
+  const StatCard = ({
+    title,
     value,
     unit,
+    icon: Icon,
     color,
   }: {
-    icon: any;
-    label: string;
+    title: string;
     value: string | number;
     unit: string;
+    icon: any;
     color: string;
   }) => (
-    <Card className={`p-4 bg-card border-${color}-500/30`}>
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-muted text-xs font-medium">{label}</p>
-          <p className={`text-2xl font-bold ${color} mt-1`}>
-            {value}
-            {unit}
-          </p>
-        </div>
-        <Icon className={`w-10 h-10 ${color}/40`} />
+    <Card className="p-4 bg-slate-800/50 border-slate-700">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-slate-400 text-sm">{title}</span>
+        <Icon className={`w-5 h-5 ${color}`} />
+      </div>
+      <div className="flex items-baseline gap-1">
+        <span className="text-2xl font-bold text-white">{value}</span>
+        <span className="text-slate-400 text-xs">{unit}</span>
       </div>
     </Card>
   );
 
-  const RobotSection = ({
-    title,
-    data,
-    stats,
-    isMaster,
-  }: {
-    title: string;
-    data: RobotData;
-    stats: any;
-    isMaster: boolean;
-  }) => (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-      className="space-y-6"
-    >
-      <div className={`bg-gradient-to-r ${isMaster ? 'from-cyan-600 to-blue-600' : 'from-purple-600 to-pink-600'} text-white p-4 rounded-lg`}>
-        <h2 className="text-2xl font-bold">{title}</h2>
-      </div>
-
-      {/* Metrics Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <MetricCard
-          icon={Zap}
-          label={t('dashboard.voltage') || 'الجهد'}
-          value={data.voltage.toFixed(2)}
-          unit="V"
-          color="text-cyan-400"
-        />
-        <MetricCard
-          icon={Gauge}
-          label={t('dashboard.current') || 'التيار'}
-          value={data.current.toFixed(2)}
-          unit="A"
-          color="text-blue-400"
-        />
-        <MetricCard
-          icon={Power}
-          label={t('dashboard.power') || 'الطاقة'}
-          value={data.power.toFixed(2)}
-          unit="W"
-          color="text-indigo-400"
-        />
-        <MetricCard
-          icon={Thermometer}
-          label={t('dashboard.temp') || 'الحرارة'}
-          value={data.temperature.toFixed(1)}
-          unit="°C"
-          color={getTempColor(data.temperature)}
-        />
-      </div>
-
-      {/* Battery and Status */}
-      <div className="grid grid-cols-2 gap-4">
-        <Card className="p-4 bg-card border-border">
-          <div className="flex items-center gap-3">
-            <Battery className={`w-8 h-8 ${getBatteryColor(data.battery)}`} />
+  return (
+    <div className={`min-h-screen bg-slate-900 text-white ${isArabic ? 'rtl' : 'ltr'}`}>
+      {/* Header */}
+      <div className="border-b border-slate-800 bg-slate-900/50 backdrop-blur-md sticky top-0 z-10 p-4">
+        <div className="container mx-auto flex justify-between items-center">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => setLocation('/selection')}>
+              <ArrowLeft className="w-6 h-6 rtl:rotate-180" />
+            </Button>
             <div>
-              <p className="text-xs text-muted">{t('dashboard.battery') || 'البطارية'}</p>
-              <p className={`text-2xl font-bold ${getBatteryColor(data.battery)}`}>
-                {data.battery.toFixed(0)}%
+              <h1 className="text-xl font-bold">{t('information.title')}</h1>
+              <p className="text-xs text-slate-400">
+                {lastUpdate 
+                  ? `${isArabic ? 'آخر تحديث:' : 'Last update:'} ${lastUpdate.toLocaleTimeString()}`
+                  : (isArabic ? 'بانتظار البيانات...' : 'Waiting for data...')}
               </p>
             </div>
           </div>
-        </Card>
-        <Card className="p-4 bg-card border-border">
-          <div>
-            <p className="text-xs text-muted">{t('dashboard.motor_status') || 'حالة المحرك'}</p>
-            <p className="text-lg font-bold text-cyan-400 capitalize">
-              {data.motorStatus === 'stopped'
-                ? t('dashboard.status.stopped') || 'متوقف'
-                : data.motorStatus === 'forward'
-                  ? t('dashboard.status.forward') || 'للأمام'
-                  : t('dashboard.status.backward') || 'للخلف'}
-            </p>
+          <div className="flex items-center gap-2">
+            {isLoading && <RefreshCw className="w-4 h-4 animate-spin text-blue-400" />}
+            <Button variant="ghost" size="icon" onClick={() => setShowSettings(!showSettings)}>
+              <Settings className="w-5 h-5" />
+            </Button>
+            <LanguageToggle />
           </div>
-        </Card>
+        </div>
       </div>
 
-      {/* Statistics */}
-      <Card className="p-4 bg-card border-border">
-        <h3 className="text-lg font-bold text-white mb-3">
-          {t('dashboard.energy_stats') || 'إحصائيات الطاقة'}
-        </h3>
-        <div className="grid grid-cols-3 gap-3">
-          <div className="p-3 bg-background rounded-lg border border-border">
-            <p className="text-xs text-muted">{t('dashboard.max_power') || 'أقصى طاقة'}</p>
-            <p className="text-xl font-bold text-indigo-400">{stats.maxPower.toFixed(2)}W</p>
+      <div className="container mx-auto p-4 space-y-6">
+        {/* Settings Panel */}
+        {showSettings && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}>
+            <Card className="p-6 bg-slate-800 border-blue-500/50 border-2">
+              <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+                <Settings className="w-5 h-5 text-blue-400" />
+                {isArabic ? 'إعدادات Adafruit IO' : 'Adafruit IO Settings'}
+              </h2>
+              <form onSubmit={handleSaveConfig} className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                <div className="space-y-2">
+                  <Label>{isArabic ? 'اسم المستخدم' : 'Username'}</Label>
+                  <Input 
+                    value={config.username} 
+                    onChange={e => setConfig({...config, username: e.target.value})}
+                    className="bg-slate-700 border-slate-600"
+                    placeholder="Kazuma_EXE"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>{isArabic ? 'مفتاح API (AIO Key)' : 'AIO Key'}</Label>
+                  <Input 
+                    type="password"
+                    value={config.key} 
+                    onChange={e => setConfig({...config, key: e.target.value})}
+                    className="bg-slate-700 border-slate-600"
+                    placeholder="aio_..."
+                  />
+                </div>
+                <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+                  {isArabic ? 'حفظ والاتصال' : 'Save & Connect'}
+                </Button>
+              </form>
+            </Card>
+          </motion.div>
+        )}
+
+        {error && (
+          <div className="bg-red-500/20 border border-red-500/50 p-4 rounded-lg flex items-center gap-3 text-red-200">
+            <AlertTriangle className="w-5 h-5" />
+            {error}
           </div>
-          <div className="p-3 bg-background rounded-lg border border-border">
-            <p className="text-xs text-muted">{t('dashboard.avg_power') || 'متوسط الطاقة'}</p>
-            <p className="text-xl font-bold text-cyan-400">{stats.avgPower.toFixed(2)}W</p>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Master Robot Section */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 px-2">
+              <Cpu className="w-5 h-5 text-purple-400" />
+              <h2 className="text-lg font-bold">{isArabic ? 'الروبوت القائد (Master)' : 'Master Robot'}</h2>
+              <span className={`text-[10px] px-2 py-0.5 rounded-full ${masterData.motor_status !== 'offline' ? 'bg-green-500/20 text-green-400' : 'bg-slate-700 text-slate-400'}`}>
+                {masterData.motor_status.toUpperCase()}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <StatCard title={t('dashboard.voltage')} value={masterData.voltage} unit="V" icon={Zap} color="text-yellow-400" />
+              <StatCard title={t('dashboard.current')} value={masterData.current} unit="A" icon={Activity} color="text-blue-400" />
+              <StatCard title={t('dashboard.temp')} value={masterData.temperature} unit="°C" icon={Thermometer} color="text-orange-400" />
+              <StatCard title={t('information.battery')} value={masterData.battery} unit="%" icon={Battery} color="text-green-400" />
+            </div>
           </div>
-          <div className="p-3 bg-background rounded-lg border border-border">
-            <p className="text-xs text-muted">{t('dashboard.max_current') || 'أقصى تيار'}</p>
-            <p className="text-xl font-bold text-blue-400">{stats.maxCurrent.toFixed(2)}A</p>
+
+          {/* Follower Robot Section */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 px-2">
+              <Cpu className="w-5 h-5 text-pink-400" />
+              <h2 className="text-lg font-bold">{isArabic ? 'الروبوت التابع (Follower)' : 'Follower Robot'}</h2>
+              <span className={`text-[10px] px-2 py-0.5 rounded-full ${followerData.motor_status !== 'offline' ? 'bg-green-500/20 text-green-400' : 'bg-slate-700 text-slate-400'}`}>
+                {followerData.motor_status.toUpperCase()}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <StatCard title={t('dashboard.voltage')} value={followerData.voltage} unit="V" icon={Zap} color="text-yellow-400" />
+              <StatCard title={t('dashboard.current')} value={followerData.current} unit="A" icon={Activity} color="text-blue-400" />
+              <StatCard title={t('dashboard.temp')} value={followerData.temperature} unit="°C" icon={Thermometer} color="text-orange-400" />
+              <StatCard title={t('information.battery')} value={followerData.battery} unit="%" icon={Battery} color="text-green-400" />
+            </div>
           </div>
         </div>
-      </Card>
-
-      {/* Warnings */}
-      {data.battery < 20 && (
-        <div className="bg-red-900/30 border-l-4 border-red-500 text-red-100 p-3 rounded">
-          <div className="flex items-center gap-2">
-            <AlertCircle size={18} />
-            <span className="text-sm">
-              {isArabic ? '⚠️ تحذير: البطارية منخفضة جداً!' : '⚠️ Warning: Battery critically low!'}
-            </span>
-          </div>
-        </div>
-      )}
-
-      {data.temperature > 60 && (
-        <div className="bg-orange-900/30 border-l-4 border-orange-500 text-orange-100 p-3 rounded">
-          <div className="flex items-center gap-2">
-            <AlertCircle size={18} />
-            <span className="text-sm">
-              {isArabic ? '⚠️ تحذير: درجة الحرارة مرتفعة!' : '⚠️ Warning: Temperature high!'}
-            </span>
-          </div>
-        </div>
-      )}
-    </motion.div>
-  );
-
-  return (
-    <div className={`min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 ${isArabic ? 'rtl' : 'ltr'}`}>
-      {/* Header */}
-      <motion.div
-        className="border-b border-border bg-gradient-to-r from-cyan-600 to-blue-600 text-white p-6 shadow-lg"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-      >
-        <div className="container mx-auto flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold">📊 {t('information.title') || 'معلومات الروبوتات'}</h1>
-            <p className="text-cyan-100 mt-1">{t('information.subtitle') || 'عرض معلومات القائد والتابع'}</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <LanguageToggle />
-            <Button
-              onClick={() => setLocation('/selection')}
-              variant="outline"
-              className="text-white border-white hover:bg-white hover:text-blue-600"
-            >
-              <ArrowLeft className="w-4 h-4 rtl:rotate-180" />
-              {isArabic ? 'رجوع' : 'Back'}
-            </Button>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Content */}
-      <div className="container mx-auto p-6 max-w-6xl space-y-12">
-        {/* Master Robot Section */}
-        <RobotSection
-          title={t('master.title') || '🤖 الروبوت القائد'}
-          data={masterData}
-          stats={masterStats}
-          isMaster={true}
-        />
-
-        {/* Divider */}
-        <div className="border-t border-border/50" />
-
-        {/* Follower Robot Section */}
-        <RobotSection
-          title={t('follower.title') || '🤖 الروبوت التابع'}
-          data={followerData}
-          stats={followerStats}
-          isMaster={false}
-        />
 
         {/* Charts Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-          className="space-y-6"
-        >
-          <h2 className="text-2xl font-bold text-white">📈 {t('information.charts') || 'الرسوم البيانية'}</h2>
-
-          {/* Power Consumption Chart */}
-          <Card className="p-6 bg-card border-border">
-            <h3 className="text-lg font-bold mb-4 text-cyan-400">
-              {t('dashboard.power_consumption') || 'استهلاك الطاقة'}
-            </h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={chartData}>
-                <defs>
-                  <linearGradient id="colorMasterPower" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#22D3EE" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#22D3EE" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="colorFollowerPower" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#A855F7" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#A855F7" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#2D3E5F" />
-                <XAxis dataKey="time" stroke="#A0A0A0" />
-                <YAxis stroke="#A0A0A0" />
-                <Tooltip contentStyle={{ backgroundColor: '#1A1F3A', border: '1px solid #2D3E5F' }} />
+        <Card className="p-6 bg-slate-800/50 border-slate-700">
+          <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
+            <Activity className="w-5 h-5 text-blue-400" />
+            {t('information.charts')}
+          </h3>
+          <div className="h-[300px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={history}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                <XAxis dataKey="time" stroke="#94a3b8" fontSize={12} />
+                <YAxis stroke="#94a3b8" fontSize={12} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '8px', color: '#fff' }}
+                  itemStyle={{ fontSize: '12px' }}
+                />
                 <Legend />
-                <Area
-                  type="monotone"
-                  dataKey="masterPower"
-                  stroke="#22D3EE"
-                  fillOpacity={1}
-                  fill="url(#colorMasterPower)"
-                  name={t('master.title') || 'القائد'}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="followerPower"
-                  stroke="#A855F7"
-                  fillOpacity={1}
-                  fill="url(#colorFollowerPower)"
-                  name={t('follower.title') || 'التابع'}
-                />
-              </AreaChart>
+                <Line type="monotone" dataKey="masterPower" name={isArabic ? 'طاقة القائد (W)' : 'Master Power (W)'} stroke="#a855f7" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="followerPower" name={isArabic ? 'طاقة التابع (W)' : 'Follower Power (W)'} stroke="#ec4899" strokeWidth={2} dot={false} />
+              </LineChart>
             </ResponsiveContainer>
-          </Card>
+          </div>
+        </Card>
 
-          {/* Voltage Chart */}
-          <Card className="p-6 bg-card border-border">
-            <h3 className="text-lg font-bold mb-4 text-cyan-400">
-              {t('dashboard.voltage') || 'الجهد'}
-            </h3>
-            <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#2D3E5F" />
-                <XAxis dataKey="time" stroke="#A0A0A0" />
-                <YAxis stroke="#A0A0A0" />
-                <Tooltip contentStyle={{ backgroundColor: '#1A1F3A', border: '1px solid #2D3E5F' }} />
-                <Legend />
-                <Line
-                  type="monotone"
-                  dataKey="masterVoltage"
-                  stroke="#22D3EE"
-                  dot={false}
-                  name={t('master.title') || 'القائد'}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="followerVoltage"
-                  stroke="#A855F7"
-                  dot={false}
-                  name={t('follower.title') || 'التابع'}
-                />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card className="p-6 bg-slate-800/50 border-slate-700 h-[250px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={history}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                <XAxis dataKey="time" stroke="#94a3b8" fontSize={10} />
+                <YAxis stroke="#94a3b8" fontSize={10} />
+                <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: 'none' }} />
+                <Line type="monotone" dataKey="masterTemp" name={isArabic ? 'حرارة القائد' : 'Master Temp'} stroke="#f97316" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="followerTemp" name={isArabic ? 'حرارة التابع' : 'Follower Temp'} stroke="#f43f5e" strokeWidth={2} dot={false} />
               </LineChart>
             </ResponsiveContainer>
           </Card>
-
-          {/* Temperature Chart */}
-          <Card className="p-6 bg-card border-border">
-            <h3 className="text-lg font-bold mb-4 text-cyan-400">
-              {t('dashboard.temp') || 'درجة الحرارة'}
-            </h3>
-            <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#2D3E5F" />
-                <XAxis dataKey="time" stroke="#A0A0A0" />
-                <YAxis stroke="#A0A0A0" />
-                <Tooltip contentStyle={{ backgroundColor: '#1A1F3A', border: '1px solid #2D3E5F' }} />
-                <Legend />
-                <Line
-                  type="monotone"
-                  dataKey="masterTemperature"
-                  stroke="#F97316"
-                  dot={false}
-                  name={t('master.title') || 'القائد'}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="followerTemperature"
-                  stroke="#EC4899"
-                  dot={false}
-                  name={t('follower.title') || 'التابع'}
-                />
+          <Card className="p-6 bg-slate-800/50 border-slate-700 h-[250px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={history}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                <XAxis dataKey="time" stroke="#94a3b8" fontSize={10} />
+                <YAxis stroke="#94a3b8" fontSize={10} />
+                <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: 'none' }} />
+                <Line type="monotone" dataKey="masterVoltage" name={isArabic ? 'جهد القائد' : 'Master Voltage'} stroke="#eab308" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="followerVoltage" name={isArabic ? 'جهد التابع' : 'Follower Voltage'} stroke="#84cc16" strokeWidth={2} dot={false} />
               </LineChart>
             </ResponsiveContainer>
           </Card>
-        </motion.div>
+        </div>
       </div>
     </div>
   );
