@@ -148,16 +148,33 @@ class ESP32Simulator:
         }
         return payload
 
+    def ensure_feeds_exist(self):
+        """Check if required feeds exist, and create them if they don't"""
+        if not self.client:
+            return
+        
+        required_feeds = ["robot-master-data", "robot-follower-data"]
+        for feed_key in required_feeds:
+            try:
+                self.client.feeds(feed_key)
+                print(f"✅ Feed '{feed_key}' exists.")
+            except Exception:
+                print(f"ℹ️  Feed '{feed_key}' not found. Attempting to create it...")
+                try:
+                    self.client.create_feed(Feed(name=feed_key.replace('-', ' ').title(), key=feed_key))
+                    print(f"✨ Created feed '{feed_key}' successfully.")
+                except Exception as e:
+                    print(f"❌ Failed to create feed '{feed_key}': {e}")
+
     def send_via_adafruit_io(self, payload):
         """Send data to Adafruit IO using the client library"""
         if not self.client:
             return False
         
+        master_feed_key = "robot-master-data"
+        follower_feed_key = "robot-follower-data"
+        
         try:
-            # Create or get feeds
-            master_feed_key = "robot-master-data"
-            follower_feed_key = "robot-follower-data"
-            
             # Send master data
             master_json = json.dumps(payload["master"])
             self.client.send(master_feed_key, master_json)
@@ -168,7 +185,12 @@ class ESP32Simulator:
             
             return True
         except Exception as e:
-            print(f"❌ Error sending to Adafruit IO: {e}")
+            error_msg = str(e)
+            if "404" in error_msg:
+                print(f"❌ Error 404: Feed not found. Make sure feeds '{master_feed_key}' and '{follower_feed_key}' exist in Adafruit IO.")
+                print("💡 Hint: The script will try to create them once at startup if you restart it.")
+            else:
+                print(f"❌ Error sending to Adafruit IO: {e}")
             return False
 
     def send_via_http(self, payload):
@@ -235,6 +257,11 @@ class ESP32Simulator:
         print("\n" + "="*70)
         print("🤖 ESP32 SIMULATOR FOR ROBOT DASHBOARD")
         print("="*70)
+        
+        # Ensure feeds exist before starting
+        if self.client:
+            self.ensure_feeds_exist()
+            
         print(f"📡 Sending data every {interval} second(s)")
         if duration:
             print(f"⏱️  Running for {duration} seconds")
