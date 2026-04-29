@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useLocation } from 'wouter';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { LanguageToggle } from '@/components/LanguageToggle';
@@ -16,35 +16,42 @@ import {
   Settings,
   AlertTriangle,
   CheckCircle2,
+  Database,
+  ShieldCheck,
+  History,
+  TrendingUp,
 } from 'lucide-react';
 import {
-  LineChart,
-  Line,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
 } from 'recharts';
 import { fetchRobotData, getAdafruitConfig, saveAdafruitConfig, RobotData } from '@/lib/adafruit';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { cn } from '@/lib/utils';
 
 export default function InformationPage() {
   const [, setLocation] = useLocation();
   const { t, language } = useLanguage();
   const isArabic = language === 'ar';
 
-  const [config, setConfig] = useState(getAdafruitConfig());
-  const [showSettings, setShowSettings] = useState(!config.username || !config.key);
+  const initialConfig = getAdafruitConfig();
+  const [config, setConfig] = useState(initialConfig);
+  const [rememberMe, setRememberMe] = useState(!!(initialConfig.username && initialConfig.key));
+  const [isConnected, setIsConnected] = useState(!!(initialConfig.username && initialConfig.key));
+  
+  const [showSettings, setShowSettings] = useState(!initialConfig.username || !initialConfig.key);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isConnected, setIsConnected] = useState(false);
   
-  // Use a ref to track if we should keep polling
-  const shouldPoll = useRef(false);
+  const shouldPoll = useRef(isConnected);
 
   const [masterData, setMasterData] = useState<RobotData>({
     voltage: 0,
@@ -66,24 +73,36 @@ export default function InformationPage() {
     timestamp: '',
   });
 
-  const [history, setHistory] = useState<any[]>([]);
+  // Pre-fill history with empty points to avoid "centered" look when empty
+  const initialHistory = useMemo(() => {
+    return Array.from({ length: 15 }).map((_, i) => ({
+      time: '',
+      masterPower: 0,
+      followerPower: 0,
+      masterTemp: 0,
+      followerTemp: 0,
+      masterVoltage: 0,
+      followerVoltage: 0,
+      isEmpty: true
+    }));
+  }, []);
 
-  const updateData = useCallback(async () => {
-    // Stop if polling is disabled or config is missing
-    if (!shouldPoll.current || !config.username || !config.key) return;
+  const [history, setHistory] = useState<any[]>(initialHistory);
+
+  const updateData = useCallback(async (currentConfig = config) => {
+    if (!shouldPoll.current || !currentConfig.username || !currentConfig.key) return;
     
     setIsLoading(true);
     try {
       const [newMaster, newFollower] = await Promise.all([
-        fetchRobotData(config, 'robot-master-data'),
-        fetchRobotData(config, 'robot-follower-data'),
+        fetchRobotData(currentConfig, 'robot-master-data'),
+        fetchRobotData(currentConfig, 'robot-follower-data'),
       ]);
 
-      // If both fail, it's likely a connection/config issue
       if (!newMaster && !newFollower) {
         setError(isArabic ? 'فشل الاتصال: تأكد من صحة البيانات والـ Feeds' : 'Connection failed: Check credentials and Feeds');
         setIsConnected(false);
-        shouldPoll.current = false; // Stop polling on error
+        shouldPoll.current = false;
         return;
       }
 
@@ -94,11 +113,12 @@ export default function InformationPage() {
       setError(null);
       setIsConnected(true);
       
-      // Update history for charts
-      const timestamp = new Date().toLocaleTimeString();
+      const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
       setHistory((prev) => {
+        // Filter out the initial empty points once we have real data
+        const filteredPrev = prev.filter(p => !p.isEmpty);
         const newHistory = [
-          ...prev,
+          ...filteredPrev,
           {
             time: timestamp,
             masterPower: newMaster?.power || 0,
@@ -109,7 +129,7 @@ export default function InformationPage() {
             followerVoltage: newFollower?.voltage || 0,
           },
         ];
-        return newHistory.slice(-20);
+        return newHistory.slice(-15);
       });
     } catch (err) {
       setError(isArabic ? 'خطأ غير متوقع في الاتصال' : 'Unexpected connection error');
@@ -121,7 +141,7 @@ export default function InformationPage() {
   }, [config, isArabic]);
 
   useEffect(() => {
-    if (config.username && config.key) {
+    if (isConnected) {
       shouldPoll.current = true;
       updateData();
       const interval = setInterval(() => {
@@ -131,18 +151,26 @@ export default function InformationPage() {
       }, 5000);
       return () => clearInterval(interval);
     } else {
-      setIsConnected(false);
       shouldPoll.current = false;
     }
-  }, [config, updateData]);
+  }, [isConnected, updateData]);
 
-  const handleSaveConfig = (e: React.FormEvent) => {
+  const handleSaveAndConnect = (e: React.FormEvent) => {
     e.preventDefault();
-    saveAdafruitConfig(config);
-    setShowSettings(false);
+    if (!config.username || !config.key) {
+      setError(isArabic ? 'يرجى إدخال اسم المستخدم والمفتاح' : 'Please enter username and key');
+      return;
+    }
+    if (rememberMe) {
+      saveAdafruitConfig(config);
+    } else {
+      localStorage.removeItem('adafruit_config');
+    }
     setError(null);
-    shouldPoll.current = true; // Re-enable polling on save
-    updateData();
+    setIsConnected(true);
+    setShowSettings(false);
+    shouldPoll.current = true;
+    updateData(config);
   };
 
   const StatCard = ({
@@ -158,87 +186,109 @@ export default function InformationPage() {
     icon: any;
     color: string;
   }) => (
-    <div className="p-4 bg-slate-800/50 border border-slate-700 rounded-xl">
+    <div className="p-4 bg-slate-900/40 backdrop-blur-md border border-slate-800 hover:border-blue-500/30 transition-all duration-300 group rounded-xl">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-slate-400 text-sm">{title}</span>
-        <Icon className={`w-5 h-5 ${color}`} />
+        <span className="text-slate-400 text-xs font-medium uppercase tracking-wider">{title}</span>
+        <div className={cn("p-2 rounded-lg bg-slate-800 group-hover:scale-110 transition-transform duration-300", color.replace('text-', 'bg-').replace('400', '500/10'))}>
+          <Icon className={cn("w-4 h-4", color)} />
+        </div>
       </div>
       <div className="flex items-baseline gap-1">
         <span className="text-2xl font-bold text-white tabular-nums">{value}</span>
-        <span className="text-slate-400 text-xs">{unit}</span>
+        <span className="text-slate-500 text-xs font-medium">{unit}</span>
       </div>
     </div>
   );
 
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length && label) {
+      return (
+        <div className="bg-slate-900/90 backdrop-blur-md border border-slate-700 p-3 rounded-lg shadow-xl">
+          <p className="text-slate-400 text-xs mb-2 font-medium">{label}</p>
+          {payload.map((entry: any, index: number) => (
+            <div key={index} className="flex items-center gap-2 text-sm">
+              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
+              <span className="text-slate-300">{entry.name}:</span>
+              <span className="text-white font-bold">{entry.value}</span>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
-    <div className={`min-h-screen bg-slate-900 text-white ${isArabic ? 'rtl' : 'ltr'}`}>
-      {/* Header */}
-      <div className="border-b border-slate-800 bg-slate-900/50 backdrop-blur-md sticky top-0 z-10 p-4">
-        <div className="container mx-auto flex justify-between items-center">
+    <div className={cn("min-h-screen bg-[#0B0F1A] text-slate-200 selection:bg-blue-500/30", isArabic ? 'font-tajawal rtl' : 'font-inter ltr')}>
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-500/5 rounded-full blur-[120px]" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-500/5 rounded-full blur-[120px]" />
+      </div>
+
+      <header className="sticky top-0 z-50 border-b border-slate-800/50 bg-[#0B0F1A]/80 backdrop-blur-xl">
+        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => setLocation('/selection')}>
-              <ArrowLeft className="w-6 h-6 rtl:rotate-180" />
+            <Button variant="ghost" size="icon" onClick={() => setLocation('/selection')} className="hover:bg-slate-800 text-slate-400 hover:text-white">
+              <ArrowLeft className="w-5 h-5 rtl:rotate-180" />
             </Button>
-            <div>
-              <h1 className="text-xl font-bold flex items-center gap-2">
+            <div className="flex flex-col">
+              <h1 className="text-lg font-bold bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent flex items-center gap-2">
                 {t('information.title')}
-                {isConnected && <CheckCircle2 className="w-4 h-4 text-green-500" />}
+                {isConnected && <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />}
               </h1>
-              <p className="text-xs text-slate-400">
-                {lastUpdate 
-                  ? `${isArabic ? 'آخر تحديث:' : 'Last update:'} ${lastUpdate.toLocaleTimeString()}`
-                  : (isArabic ? 'بانتظار الاتصال...' : 'Waiting for connection...')}
-              </p>
+              <div className="flex items-center gap-2 text-[10px] text-slate-500 uppercase tracking-tighter">
+                <History className="w-3 h-3" />
+                {lastUpdate ? `${isArabic ? 'تحديث:' : 'Last:'} ${lastUpdate.toLocaleTimeString()}` : (isArabic ? 'بانتظار البيانات' : 'Waiting')}
+              </div>
             </div>
           </div>
+
           <div className="flex items-center gap-2">
-            {isLoading && <RefreshCw className="w-4 h-4 animate-spin text-blue-400" />}
-            <Button variant="ghost" size="icon" onClick={() => setShowSettings(!showSettings)}>
+            <div className={cn(
+              "flex items-center gap-2 px-3 py-1 rounded-full border text-[10px] font-bold uppercase tracking-widest transition-all duration-500",
+              isConnected ? "border-green-500/20 bg-green-500/5 text-green-500" : "border-red-500/20 bg-red-500/5 text-red-500"
+            )}>
+              <div className={cn("w-1.5 h-1.5 rounded-full", isConnected ? "bg-green-500" : "bg-red-500")} />
+              {isConnected ? (isArabic ? 'متصل' : 'Connected') : (isArabic ? 'غير متصل' : 'Disconnected')}
+            </div>
+            <Button variant="ghost" size="icon" onClick={() => setShowSettings(!showSettings)} className={cn("hover:bg-slate-800", showSettings && "bg-slate-800 text-blue-400")}>
               <Settings className="w-5 h-5" />
             </Button>
             <LanguageToggle />
           </div>
         </div>
-      </div>
+      </header>
 
-      <div className="container mx-auto p-4 space-y-6">
-        {/* Settings Panel */}
+      <main className="container mx-auto px-4 py-8 relative">
         <AnimatePresence>
           {showSettings && (
-            <motion.div 
-              initial={{ height: 0, opacity: 0 }} 
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden"
-            >
-              <Card className="p-6 bg-slate-800 border-blue-500/50 border-2 mb-4">
-                <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-                  <Settings className="w-5 h-5 text-blue-400" />
-                  {isArabic ? 'إعدادات Adafruit IO' : 'Adafruit IO Settings'}
-                </h2>
-                <form onSubmit={handleSaveConfig} className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                  <div className="space-y-2">
-                    <Label>{isArabic ? 'اسم المستخدم' : 'Username'}</Label>
-                    <Input 
-                      value={config.username} 
-                      onChange={e => setConfig({...config, username: e.target.value})}
-                      className="bg-slate-700 border-slate-600"
-                      placeholder="Kazuma_EXE"
-                    />
+            <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="mb-8">
+              <Card className="p-6 bg-slate-900/50 border-blue-500/20 backdrop-blur-md">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="p-2 bg-blue-500/10 rounded-lg"><Database className="w-5 h-5 text-blue-400" /></div>
+                  <div>
+                    <h2 className="text-lg font-bold text-white">{isArabic ? 'إعدادات الاتصال' : 'Connection Settings'}</h2>
+                    <p className="text-xs text-slate-500">{isArabic ? 'أدخل بيانات Adafruit IO للبدء' : 'Enter Adafruit IO credentials to start'}</p>
                   </div>
-                  <div className="space-y-2">
-                    <Label>{isArabic ? 'مفتاح API (AIO Key)' : 'AIO Key'}</Label>
-                    <Input 
-                      type="password"
-                      value={config.key} 
-                      onChange={e => setConfig({...config, key: e.target.value})}
-                      className="bg-slate-700 border-slate-600"
-                      placeholder="aio_..."
-                    />
+                </div>
+                <form onSubmit={handleSaveAndConnect} className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label className="text-xs font-bold uppercase tracking-widest text-slate-500">{isArabic ? 'اسم المستخدم' : 'Username'}</Label>
+                      <Input value={config.username} onChange={e => setConfig({...config, username: e.target.value})} className="bg-slate-800/50 border-slate-700 focus:border-blue-500/50 transition-colors" placeholder="Kazuma_EXE" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-bold uppercase tracking-widest text-slate-500">{isArabic ? 'مفتاح API' : 'AIO Key'}</Label>
+                      <Input type="password" value={config.key} onChange={e => setConfig({...config, key: e.target.value})} className="bg-slate-800/50 border-slate-700 focus:border-blue-500/50 transition-colors" placeholder="aio_..." />
+                    </div>
                   </div>
-                  <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
-                    {isArabic ? 'حفظ والاتصال' : 'Save & Connect'}
-                  </Button>
+                  <div className="flex items-center justify-between pt-4 border-t border-slate-800">
+                    <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                      <Checkbox id="remember" checked={rememberMe} onCheckedChange={(checked) => setRememberMe(checked as boolean)} />
+                      <label htmlFor="remember" className="text-xs text-slate-400 cursor-pointer">{isArabic ? 'تذكر بياناتي' : 'Remember me'}</label>
+                    </div>
+                    <Button type="submit" className="bg-blue-600 hover:bg-blue-700 px-8">{isArabic ? 'اتصال بالروبوت' : 'Connect to Robot'}</Button>
+                  </div>
                 </form>
               </Card>
             </motion.div>
@@ -246,119 +296,117 @@ export default function InformationPage() {
         </AnimatePresence>
 
         {error && (
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-red-500/20 border border-red-500/50 p-4 rounded-lg flex items-center justify-between gap-3 text-red-200"
-          >
-            <div className="flex items-center gap-3">
-              <AlertTriangle className="w-5 h-5" />
-              {error}
-            </div>
-            <Button size="sm" variant="outline" className="border-red-500/50 hover:bg-red-500/20" onClick={() => setShowSettings(true)}>
-              {isArabic ? 'تعديل البيانات' : 'Edit Credentials'}
-            </Button>
+          <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="mb-8 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center justify-between">
+            <div className="flex items-center gap-3 text-red-400"><AlertTriangle className="w-5 h-5" /><span className="text-sm font-medium">{error}</span></div>
+            <Button variant="ghost" size="sm" onClick={() => setShowSettings(true)} className="text-red-400 hover:bg-red-500/10">{isArabic ? 'تعديل' : 'Fix'}</Button>
           </motion.div>
         )}
 
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="grid grid-cols-1 lg:grid-cols-2 gap-6"
-        >
-          {/* Master Robot Section */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 px-2">
-              <Cpu className="w-5 h-5 text-purple-400" />
-              <h2 className="text-lg font-bold">{isArabic ? 'الروبوت القائد (Master)' : 'Master Robot'}</h2>
-              <span className={`text-[10px] px-2 py-0.5 rounded-full ${masterData.motor_status !== 'offline' ? 'bg-green-500/20 text-green-400' : 'bg-slate-700 text-slate-400'}`}>
-                {masterData.motor_status.toUpperCase()}
-              </span>
+        <div className="space-y-8">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between px-2">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-purple-500/10 rounded-lg"><ShieldCheck className="w-5 h-5 text-purple-400" /></div>
+                  <h2 className="text-lg font-bold text-white uppercase tracking-tight">{isArabic ? 'الروبوت القائد' : 'Master Robot'}</h2>
+                </div>
+                <div className={cn("px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter", masterData.motor_status !== 'offline' ? "bg-green-500/10 text-green-500" : "bg-slate-800 text-slate-500")}>{masterData.motor_status}</div>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <StatCard title={t('dashboard.voltage')} value={masterData.voltage} unit="V" icon={Zap} color="text-yellow-400" />
+                <StatCard title={t('dashboard.current')} value={masterData.current} unit="A" icon={Activity} color="text-blue-400" />
+                <StatCard title={t('dashboard.temp')} value={masterData.temperature} unit="°C" icon={Thermometer} color="text-orange-400" />
+                <StatCard title={t('information.battery')} value={masterData.battery} unit="%" icon={Battery} color="text-green-400" />
+              </div>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <StatCard title={t('dashboard.voltage')} value={masterData.voltage} unit="V" icon={Zap} color="text-yellow-400" />
-              <StatCard title={t('dashboard.current')} value={masterData.current} unit="A" icon={Activity} color="text-blue-400" />
-              <StatCard title={t('dashboard.temp')} value={masterData.temperature} unit="°C" icon={Thermometer} color="text-orange-400" />
-              <StatCard title={t('information.battery')} value={masterData.battery} unit="%" icon={Battery} color="text-green-400" />
-            </div>
-          </div>
 
-          {/* Follower Robot Section */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 px-2">
-              <Cpu className="w-5 h-5 text-pink-400" />
-              <h2 className="text-lg font-bold">{isArabic ? 'الروبوت التابع (Follower)' : 'Follower Robot'}</h2>
-              <span className={`text-[10px] px-2 py-0.5 rounded-full ${followerData.motor_status !== 'offline' ? 'bg-green-500/20 text-green-400' : 'bg-slate-700 text-slate-400'}`}>
-                {followerData.motor_status.toUpperCase()}
-              </span>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between px-2">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-pink-500/10 rounded-lg"><Cpu className="w-5 h-5 text-pink-400" /></div>
+                  <h2 className="text-lg font-bold text-white uppercase tracking-tight">{isArabic ? 'الروبوت التابع' : 'Follower Robot'}</h2>
+                </div>
+                <div className={cn("px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter", followerData.motor_status !== 'offline' ? "bg-green-500/10 text-green-500" : "bg-slate-800 text-slate-500")}>{followerData.motor_status}</div>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <StatCard title={t('dashboard.voltage')} value={followerData.voltage} unit="V" icon={Zap} color="text-yellow-400" />
+                <StatCard title={t('dashboard.current')} value={followerData.current} unit="A" icon={Activity} color="text-blue-400" />
+                <StatCard title={t('dashboard.temp')} value={followerData.temperature} unit="°C" icon={Thermometer} color="text-orange-400" />
+                <StatCard title={t('information.battery')} value={followerData.battery} unit="%" icon={Battery} color="text-green-400" />
+              </div>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <StatCard title={t('dashboard.voltage')} value={followerData.voltage} unit="V" icon={Zap} color="text-yellow-400" />
-              <StatCard title={t('dashboard.current')} value={followerData.current} unit="A" icon={Activity} color="text-blue-400" />
-              <StatCard title={t('dashboard.temp')} value={followerData.temperature} unit="°C" icon={Thermometer} color="text-orange-400" />
-              <StatCard title={t('information.battery')} value={followerData.battery} unit="%" icon={Battery} color="text-green-400" />
-            </div>
-          </div>
-        </motion.div>
+          </motion.div>
 
-        {/* Charts Section */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.3 }}
-        >
-          <Card className="p-6 bg-slate-800/50 border-slate-700">
-            <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
-              <Activity className="w-5 h-5 text-blue-400" />
-              {t('information.charts')}
-            </h3>
-            <div className="h-[300px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={history}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                  <XAxis dataKey="time" stroke="#94a3b8" fontSize={12} />
-                  <YAxis stroke="#94a3b8" fontSize={12} />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '8px', color: '#fff' }}
-                    itemStyle={{ fontSize: '12px' }}
-                  />
-                  <Legend />
-                  <Line isAnimationActive={false} type="monotone" dataKey="masterPower" name={isArabic ? 'طاقة القائد (W)' : 'Master Power (W)'} stroke="#a855f7" strokeWidth={2} dot={false} />
-                  <Line isAnimationActive={false} type="monotone" dataKey="followerPower" name={isArabic ? 'طاقة التابع (W)' : 'Follower Power (W)'} stroke="#ec4899" strokeWidth={2} dot={false} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </Card>
-        </motion.div>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }} className="grid grid-cols-1 gap-8">
+            <Card className="p-6 bg-slate-900/40 border-slate-800/50 backdrop-blur-md">
+              <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-500/10 rounded-lg"><TrendingUp className="w-5 h-5 text-blue-400" /></div>
+                  <h3 className="text-lg font-bold text-white uppercase tracking-tight">{t('information.charts')}</h3>
+                </div>
+                <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest">
+                  <div className="flex items-center gap-2"><div className="w-3 h-1 bg-blue-500 rounded-full" /><span className="text-slate-400">{isArabic ? 'القائد' : 'Master'}</span></div>
+                  <div className="flex items-center gap-2"><div className="w-3 h-1 bg-pink-500 rounded-full" /><span className="text-slate-400">{isArabic ? 'التابع' : 'Follower'}</span></div>
+                </div>
+              </div>
+              <div className="h-[350px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={history}>
+                    <defs>
+                      <linearGradient id="colorMaster" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/><stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/></linearGradient>
+                      <linearGradient id="colorFollower" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#ec4899" stopOpacity={0.3}/><stop offset="95%" stopColor="#ec4899" stopOpacity={0}/></linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                    <XAxis dataKey="time" stroke="#475569" fontSize={10} tickLine={false} axisLine={false} />
+                    <YAxis stroke="#475569" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}W`} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Area type="monotone" dataKey="masterPower" name={isArabic ? 'طاقة القائد' : 'Master Power'} stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorMaster)" animationDuration={1000} animationEasing="linear" />
+                    <Area type="monotone" dataKey="followerPower" name={isArabic ? 'طاقة التابع' : 'Follower Power'} stroke="#ec4899" strokeWidth={3} fillOpacity={1} fill="url(#colorFollower)" animationDuration={1000} animationEasing="linear" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </Card>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card className="p-6 bg-slate-800/50 border-slate-700 h-[250px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={history}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                <XAxis dataKey="time" stroke="#94a3b8" fontSize={10} />
-                <YAxis stroke="#94a3b8" fontSize={10} />
-                <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: 'none' }} />
-                <Line isAnimationActive={false} type="monotone" dataKey="masterTemp" name={isArabic ? 'حرارة القائد' : 'Master Temp'} stroke="#f97316" strokeWidth={2} dot={false} />
-                <Line isAnimationActive={false} type="monotone" dataKey="followerTemp" name={isArabic ? 'حرارة التابع' : 'Follower Temp'} stroke="#f43f5e" strokeWidth={2} dot={false} />
-              </LineChart>
-            </ResponsiveContainer>
-          </Card>
-          <Card className="p-6 bg-slate-800/50 border-slate-700 h-[250px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={history}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                <XAxis dataKey="time" stroke="#94a3b8" fontSize={10} />
-                <YAxis stroke="#94a3b8" fontSize={10} />
-                <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: 'none' }} />
-                <Line isAnimationActive={false} type="monotone" dataKey="masterVoltage" name={isArabic ? 'جهد القائد' : 'Master Voltage'} stroke="#eab308" strokeWidth={2} dot={false} />
-                <Line isAnimationActive={false} type="monotone" dataKey="followerVoltage" name={isArabic ? 'جهد التابع' : 'Follower Voltage'} stroke="#84cc16" strokeWidth={2} dot={false} />
-              </LineChart>
-            </ResponsiveContainer>
-          </Card>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <Card className="p-6 bg-slate-900/40 border-slate-800/50 backdrop-blur-md h-[300px]">
+                <h4 className="text-xs font-black uppercase tracking-widest text-slate-500 mb-6">{isArabic ? 'مراقبة الحرارة' : 'Temperature Monitor'}</h4>
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={history}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                    <XAxis dataKey="time" hide />
+                    <YAxis hide domain={['auto', 'auto']} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Area type="monotone" dataKey="masterTemp" stroke="#f97316" strokeWidth={2} fill="#f97316" fillOpacity={0.1} animationDuration={1000} animationEasing="linear" />
+                    <Area type="monotone" dataKey="followerTemp" stroke="#f43f5e" strokeWidth={2} fill="#f43f5e" fillOpacity={0.1} animationDuration={1000} animationEasing="linear" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </Card>
+              <Card className="p-6 bg-slate-900/40 border-slate-800/50 backdrop-blur-md h-[300px]">
+                <h4 className="text-xs font-black uppercase tracking-widest text-slate-500 mb-6">{isArabic ? 'مراقبة الجهد' : 'Voltage Monitor'}</h4>
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={history}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                    <XAxis dataKey="time" hide />
+                    <YAxis hide domain={['auto', 'auto']} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Area type="monotone" dataKey="masterVoltage" stroke="#eab308" strokeWidth={2} fill="#eab308" fillOpacity={0.1} animationDuration={1000} animationEasing="linear" />
+                    <Area type="monotone" dataKey="followerVoltage" stroke="#84cc16" strokeWidth={2} fill="#84cc16" fillOpacity={0.1} animationDuration={1000} animationEasing="linear" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </Card>
+            </div>
+          </motion.div>
         </div>
-      </div>
+      </main>
+
+      {isLoading && !isConnected && (
+        <div className="fixed inset-0 bg-[#0B0F1A]/60 backdrop-blur-sm z-[100] flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <RefreshCw className="w-8 h-8 text-blue-500 animate-spin" />
+            <p className="text-sm font-medium text-blue-400 animate-pulse uppercase tracking-widest">{isArabic ? 'جاري الاتصال...' : 'Connecting...'}</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
